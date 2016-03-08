@@ -5,7 +5,7 @@ OUTPUT_PATH := ../build
 DIRS        := $(shell echo */)
 TARGETS     := $(patsubst %/, $(OUTPUT_PATH)/$(PREFIX)%, $(DIRS))
 
-.PHONY: all
+.PHONY: all clean
 all: $(TARGETS)
 clean:
 	@rm -rf $(TARGETS)
