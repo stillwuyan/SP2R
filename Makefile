@@ -1,0 +1,2 @@
+sample:
+	make -C samples
