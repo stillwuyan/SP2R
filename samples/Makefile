@@ -1,20 +1,31 @@
-include ../common.mk
+ROOT        := ..
+include $(strip $(ROOT))/build/common.mk
 
-PREFIX      := sample_
-OUTPUT_PATH := ../build
+OUTPUT_PATH := $(strip $(ROOT))/$(strip $(OUTPUT))/sample
 DIRS        := $(shell echo */)
-TARGETS     := $(patsubst %/, $(OUTPUT_PATH)/$(PREFIX)%, $(DIRS))
 
 define TARGET_template
 SRC     := $(wildcard $(1)/*.c)
-TARGET  := $(strip $(OUTPUT_PATH))/$(strip $(PREFIX))$(strip $(1))
+TARGET  := $(strip $(OUTPUT_PATH))/$(strip $(1))
+TARGETS += $$(TARGET)
 $$(TARGET):
 	$$(CC) $$(SRC) $$(CFLAGS) $$(LIBS) -o $$@
 endef
 
-.PHONY: all clean
-all: $(TARGETS)
+.PHONY: help all clean
+help:
+	@echo 'Usage: make [options]'
+	@echo 'Options:'
+	@echo ' help            Display this information'
+	@echo ' all             Build all samples'
+	@echo ' clean           Clean all samples'
+
+include $(addsuffix target.mk, $(strip $(DIRS)))
+
+all: $(OUTPUT_PATH) $(TARGETS)
+
 clean:
 	@rm -rf $(TARGETS)
 
-include $(addsuffix target.mk, $(DIRS))
+$(OUTPUT_PATH):
+	@mkdir -p $@

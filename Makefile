@@ -1,7 +1,8 @@
 .PHONY: samples cleansamples
-samples: build
+samples: output
 	make -C samples all
 cleansamples:
 	make -C samples clean
-build:
-	@mkdir -p build
+output:
+	@mkdir -p output/release
+	@mkdir -p output/debug
