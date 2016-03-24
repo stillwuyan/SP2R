@@ -5,7 +5,6 @@ OUTPUT_PATH := $(strip $(ROOT))/$(strip $(OUTPUT))/sample
 DIRS        := $(shell echo */)
 
 define TARGET_template
-SRC     := $(wildcard $(1)/*.c)
 TARGET  := $(strip $(OUTPUT_PATH))/$(strip $(1))
 TARGETS += $$(TARGET)
 $$(TARGET):
@@ -25,7 +24,7 @@ include $(addsuffix target.mk, $(strip $(DIRS)))
 all: $(OUTPUT_PATH) $(TARGETS)
 
 clean:
-	@rm -rf $(TARGETS)
+	rm -rf $(TARGETS)
 
 $(OUTPUT_PATH):
-	@mkdir -p $@
+	mkdir -p $@

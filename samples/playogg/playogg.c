@@ -14,7 +14,6 @@ bus_call (GstBus     *bus,
           gpointer    data)
 {
   GMainLoop *loop = (GMainLoop *) data;
-  printf("child id: %ld\n", syscall(SYS_gettid));
   switch (GST_MESSAGE_TYPE (msg)) {
 
     case GST_MESSAGE_EOS:
@@ -67,7 +66,6 @@ int
 main (int   argc,
       char *argv[])
 {
-  printf("main id: %ld\n", syscall(SYS_gettid));
   GMainLoop *loop;
 
   GstElement *pipeline, *source, *demuxer, *decoder, *conv, *sink;
