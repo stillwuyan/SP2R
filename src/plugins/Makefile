@@ -4,15 +4,15 @@ include $(strip $(ROOT))/build/common.mk
 OUTPUT_PATH := $(strip $(ROOT))/$(strip $(OUTPUT))/plugins
 DIRS        := $(filter-out tools/, $(shell echo */))
 
+CFLAGS      += -fPIC
+LDFLAGS     += -shared
+
 define TARGET_plugin
-TARGET  := $(strip $(OUTPUT_PATH))/libgst$(strip $(1)).so
-TARGETS += $$(TARGET)
+TARGET      := $(strip $(OUTPUT_PATH))/lib$(strip $(1)).so
+TARGETS     += $$(TARGET)
 
-CFLAGS  += -fPIC
-LDFLAGS += -shared
-
-$$(TARGET):
-	$$(CC) $$(SRC) $$(CFLAGS) $$(LDFLAGS) $$(LIBS) -o $$@
+$$(TARGET): $(SRC)
+	$(CC) $(SRC) $(CFLAGS) $(LDFLAGS) $(LIBS) $(2) -o $$@
 endef
 
 .PHONY: help all clean
