@@ -5,10 +5,10 @@ OUTPUT_PATH := $(strip $(ROOT))/$(strip $(OUTPUT))/sample
 DIRS        := $(shell echo */)
 
 define TARGET_template
-TARGET  := $(strip $(OUTPUT_PATH))/$(strip $(1))
+TARGET  := $$(strip $$(OUTPUT_PATH))/$$(strip $(1))
 TARGETS += $$(TARGET)
 $$(TARGET):
-	$$(CC) $$(SRC) $$(CFLAGS) $$(LIBS) -o $$@
+	$$(CC) $$(SRC) $$(CFLAGS) $$(LDFLAGS) -o $$@
 endef
 
 .PHONY: help all clean

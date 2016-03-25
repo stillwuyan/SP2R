@@ -8,11 +8,13 @@ CFLAGS      += -fPIC
 LDFLAGS     += -shared
 
 define TARGET_plugin
-TARGET      := $(strip $(OUTPUT_PATH))/lib$(strip $(1)).so
+TARGET      := $$(strip $$(OUTPUT_PATH))/lib$$(strip $(1)).so
 TARGETS     += $$(TARGET)
 
-$$(TARGET): $(SRC)
-	$(CC) $(SRC) $(CFLAGS) $(LDFLAGS) $(LIBS) $(2) -o $$@
+$$(TARGET): CFLAGS += $(2)
+$$(TARGET): LDFLAGS += $(3)
+$$(TARGET): $$(SRC)
+	$$(CC) $$(SRC) $$(CFLAGS) $$(LDFLAGS) -o $$@
 endef
 
 .PHONY: help all clean

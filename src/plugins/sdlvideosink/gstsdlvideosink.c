@@ -39,6 +39,12 @@
 #include <gst/video/gstvideosink.h>
 #include "gstsdlvideosink.h"
 
+#include <SDL.h>
+#include <SDL_thread.h>
+SDL_Window* g_screen = 0;
+SDL_Renderer* g_renderer = 0;
+SDL_Texture* g_texture = 0;
+
 GST_DEBUG_CATEGORY_STATIC (gst_sdl_video_sink_debug_category);
 #define GST_CAT_DEFAULT gst_sdl_video_sink_debug_category
 
@@ -100,6 +106,29 @@ gst_sdl_video_sink_class_init (GstSdlVideoSinkClass * klass)
 static void
 gst_sdl_video_sink_init (GstSdlVideoSink *sdlvideosink)
 {
+
+    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
+        fprintf(stderr, "Could not initialize SDL - %s\n", SDL_GetError());
+        exit(1);
+    }
+
+    g_screen = SDL_CreateWindow("SDL Overlay", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1920, 1080, SDL_WINDOW_FULLSCREEN);
+    if (!g_screen) {
+        fprintf(stderr, "Could not create window -exiting\n");
+        exit(1);
+    }
+
+    g_renderer = SDL_CreateRenderer(g_screen, -1, 0);
+    if (!g_renderer) {
+        fprintf(stderr, "Could not create renderer - exiting\n");
+        exit(1);
+    }
+
+    g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, 1920, 1080);
+    if (!g_texture) {
+        fprintf(stderr, "Could not create texture - exiting\n");
+        exit(1);
+    }
 }
 
 void
@@ -152,6 +181,10 @@ gst_sdl_video_sink_finalize (GObject * object)
   GST_DEBUG_OBJECT (sdlvideosink, "finalize");
 
   /* clean up object here */
+    SDL_DestroyTexture(g_texture);
+    SDL_DestroyRenderer(g_renderer);
+    SDL_DestroyWindow(g_screen);
+    SDL_Quit();
 
   G_OBJECT_CLASS (gst_sdl_video_sink_parent_class)->finalize (object);
 }
@@ -159,10 +192,17 @@ gst_sdl_video_sink_finalize (GObject * object)
 static GstFlowReturn
 gst_sdl_video_sink_show_frame (GstVideoSink * sink, GstBuffer * buf)
 {
-  GstSdlVideoSink *sdlvideosink = GST_SDL_VIDEO_SINK (sink);
-
-  GST_DEBUG_OBJECT (sdlvideosink, "show_frame");
-
+  GstMapInfo map;
+  if (gst_buffer_map(buf, &map, GST_MAP_READ)) {
+    Uint8* yPlane = map.data;
+    Uint8* uPlane = yPlane + (1920 * 1080);
+    Uint8* vPlane = uPlane + (1920 * 1080 / 4);
+    SDL_UpdateYUVTexture(g_texture, NULL, yPlane, 1920, uPlane, 960, vPlane, 960);
+    SDL_RenderClear(g_renderer);
+    SDL_RenderCopy(g_renderer, g_texture, NULL, NULL);
+    SDL_RenderPresent(g_renderer);
+    gst_buffer_unmap(buf, &map);
+  }
   return GST_FLOW_OK;
 }
 
