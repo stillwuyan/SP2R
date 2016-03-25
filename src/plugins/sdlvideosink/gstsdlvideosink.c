@@ -112,13 +112,14 @@ gst_sdl_video_sink_init (GstSdlVideoSink *sdlvideosink)
         exit(1);
     }
 
-    g_screen = SDL_CreateWindow("SDL Overlay", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1920, 1080, SDL_WINDOW_FULLSCREEN);
+    g_screen = SDL_CreateWindow("SDL Overlay", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1920, 1080, SDL_WINDOW_RESIZABLE);
     if (!g_screen) {
         fprintf(stderr, "Could not create window -exiting\n");
         exit(1);
     }
 
-    g_renderer = SDL_CreateRenderer(g_screen, -1, 0);
+    g_renderer = SDL_CreateRenderer(g_screen, -1, SDL_RENDERER_SOFTWARE);
+    //g_renderer = SDL_CreateRenderer(g_screen, -1, SDL_RENDERER_ACCELERATED);
     if (!g_renderer) {
         fprintf(stderr, "Could not create renderer - exiting\n");
         exit(1);
