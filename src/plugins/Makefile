@@ -14,7 +14,7 @@ TARGETS     += $$(TARGET)
 $$(TARGET): CFLAGS += $(2)
 $$(TARGET): LDFLAGS += $(3)
 $$(TARGET): $$(SRC)
-	$$(CC) $$(SRC) $$(CFLAGS) $$(LDFLAGS) -o $$@
+	$$(CXX) $$(SRC) $$(CFLAGS) $$(LDFLAGS) -o $$@
 endef
 
 .PHONY: help all clean

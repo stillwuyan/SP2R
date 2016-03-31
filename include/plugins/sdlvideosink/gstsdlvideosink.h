@@ -37,7 +37,7 @@ typedef struct _GstSdlVideoSinkClass GstSdlVideoSinkClass;
 struct _GstSdlVideoSink
 {
   GstVideoSink base_sdlvideosink;
-
+  int dlevel;
 };
 
 struct _GstSdlVideoSinkClass

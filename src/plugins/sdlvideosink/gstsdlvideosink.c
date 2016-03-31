@@ -37,14 +37,14 @@
 #include <gst/gst.h>
 #include <gst/video/video.h>
 #include <gst/video/gstvideosink.h>
-#include "gstsdlvideosink.h"
-
+#include <gstsdlvideosink.h>
 #include <SDL.h>
 #include <SDL_thread.h>
-SDL_Window* g_screen = 0;
-SDL_Renderer* g_renderer = 0;
-SDL_Texture* g_texture = 0;
-
+const gint g_screen_width = 960;
+const gint g_screen_height = 540;
+static SDL_Window* g_screen = 0;
+static SDL_Renderer* g_renderer = 0;
+static SDL_Texture* g_texture = 0;
 GST_DEBUG_CATEGORY_STATIC (gst_sdl_video_sink_debug_category);
 #define GST_CAT_DEFAULT gst_sdl_video_sink_debug_category
 
@@ -57,20 +57,23 @@ static void gst_sdl_video_sink_get_property (GObject * object,
     guint property_id, GValue * value, GParamSpec * pspec);
 static void gst_sdl_video_sink_dispose (GObject * object);
 static void gst_sdl_video_sink_finalize (GObject * object);
-
+static gboolean gst_sdl_video_sink_set_caps(GstBaseSink *sink, GstCaps *caps);
 static GstFlowReturn gst_sdl_video_sink_show_frame (GstVideoSink * video_sink,
     GstBuffer * buf);
+static void gst_sdl_video_sink_create_window(gint width, gint height);
 
 enum
 {
-  PROP_0
+  PROP_0,
+  PROP_DETAIL_LEVEL
 };
 
 /* pad templates */
 
 /* FIXME: add/remove formats you can handle */
 #define VIDEO_SINK_CAPS \
-    GST_VIDEO_CAPS_MAKE("{ I420, Y444, Y42B, UYVY, RGBA }")
+    GST_VIDEO_CAPS_MAKE("{ RGB }")
+    //GST_VIDEO_CAPS_MAKE("{ I420, Y444, Y42B, UYVY, RGBA }")
 
 
 /* class initialization */
@@ -83,6 +86,7 @@ static void
 gst_sdl_video_sink_class_init (GstSdlVideoSinkClass * klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+  GstBaseSinkClass *base_sink_class = GST_BASE_SINK_CLASS(klass);
   GstVideoSinkClass *video_sink_class = GST_VIDEO_SINK_CLASS (klass);
 
   /* Setting up pads and setting metadata should be moved to
@@ -99,37 +103,22 @@ gst_sdl_video_sink_class_init (GstSdlVideoSinkClass * klass)
   gobject_class->get_property = gst_sdl_video_sink_get_property;
   gobject_class->dispose = gst_sdl_video_sink_dispose;
   gobject_class->finalize = gst_sdl_video_sink_finalize;
+  base_sink_class->set_caps = gst_sdl_video_sink_set_caps;
   video_sink_class->show_frame = GST_DEBUG_FUNCPTR (gst_sdl_video_sink_show_frame);
-
+  g_object_class_install_property (gobject_class, PROP_DETAIL_LEVEL,
+    g_param_spec_int("dlevel", "Shadow detail enhance level", "Level range is 0 ~ 100",
+                     G_MININT, G_MAXINT, 0, (GParamFlags)(G_PARAM_READWRITE  | G_PARAM_STATIC_STRINGS)));
 }
 
 static void
 gst_sdl_video_sink_init (GstSdlVideoSink *sdlvideosink)
 {
-
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
         fprintf(stderr, "Could not initialize SDL - %s\n", SDL_GetError());
         exit(1);
     }
 
-    g_screen = SDL_CreateWindow("SDL Overlay", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1920, 1080, SDL_WINDOW_RESIZABLE);
-    if (!g_screen) {
-        fprintf(stderr, "Could not create window -exiting\n");
-        exit(1);
-    }
-
-    g_renderer = SDL_CreateRenderer(g_screen, -1, SDL_RENDERER_SOFTWARE);
-    //g_renderer = SDL_CreateRenderer(g_screen, -1, SDL_RENDERER_ACCELERATED);
-    if (!g_renderer) {
-        fprintf(stderr, "Could not create renderer - exiting\n");
-        exit(1);
-    }
-
-    g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, 1920, 1080);
-    if (!g_texture) {
-        fprintf(stderr, "Could not create texture - exiting\n");
-        exit(1);
-    }
+    sdlvideosink->dlevel = 0;
 }
 
 void
@@ -137,10 +126,12 @@ gst_sdl_video_sink_set_property (GObject * object, guint property_id,
     const GValue * value, GParamSpec * pspec)
 {
   GstSdlVideoSink *sdlvideosink = GST_SDL_VIDEO_SINK (object);
-
   GST_DEBUG_OBJECT (sdlvideosink, "set_property");
 
   switch (property_id) {
+    case PROP_DETAIL_LEVEL:
+      sdlvideosink->dlevel = g_value_get_int(value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -156,6 +147,9 @@ gst_sdl_video_sink_get_property (GObject * object, guint property_id,
   GST_DEBUG_OBJECT (sdlvideosink, "get_property");
 
   switch (property_id) {
+    case PROP_DETAIL_LEVEL:
+      g_value_set_int(value, sdlvideosink->dlevel);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -190,21 +184,64 @@ gst_sdl_video_sink_finalize (GObject * object)
   G_OBJECT_CLASS (gst_sdl_video_sink_parent_class)->finalize (object);
 }
 
+gboolean
+gst_sdl_video_sink_set_caps(GstBaseSink *sink, GstCaps *caps)
+{
+  GstVideoSink *videosink = GST_VIDEO_SINK(sink);
+  GstVideoInfo info;
+  gst_video_info_from_caps (&info, caps);
+  GST_VIDEO_SINK_WIDTH (videosink) = info.width;
+  GST_VIDEO_SINK_HEIGHT (videosink) = info.height;
+  gst_sdl_video_sink_create_window(info.width, info.height);
+  return TRUE;
+}
+
 static GstFlowReturn
 gst_sdl_video_sink_show_frame (GstVideoSink * sink, GstBuffer * buf)
 {
+  GstSdlVideoSink *sdlvideosink = GST_SDL_VIDEO_SINK (sink);
+  GST_DEBUG_OBJECT (sdlvideosink, "set_property");
   GstMapInfo map;
   if (gst_buffer_map(buf, &map, GST_MAP_READ)) {
-    Uint8* yPlane = map.data;
-    Uint8* uPlane = yPlane + (1920 * 1080);
-    Uint8* vPlane = uPlane + (1920 * 1080 / 4);
-    SDL_UpdateYUVTexture(g_texture, NULL, yPlane, 1920, uPlane, 960, vPlane, 960);
+    //Uint8* yPlane = map.data;
+    //Uint8* uPlane = yPlane + (GST_VIDEO_SINK_WIDTH (sink) * GST_VIDEO_SINK_HEIGHT (sink));
+    //Uint8* vPlane = uPlane + (GST_VIDEO_SINK_WIDTH (sink) * GST_VIDEO_SINK_HEIGHT (sink) / 4);
+    //SDL_UpdateYUVTexture(g_texture, NULL, yPlane, GST_VIDEO_SINK_WIDTH (sink), uPlane, GST_VIDEO_SINK_WIDTH (sink)/2, vPlane, GST_VIDEO_SINK_WIDTH (sink)/2);
+    int pitch = GST_VIDEO_SINK_WIDTH (sink) * 3;
+    Uint8* pixels = NULL;
+    SDL_LockTexture(g_texture, NULL, (void**)&pixels, &pitch);
+    memcpy(pixels, map.data, pitch * GST_VIDEO_SINK_HEIGHT (sink));
+    SDL_UnlockTexture(g_texture);
     SDL_RenderClear(g_renderer);
     SDL_RenderCopy(g_renderer, g_texture, NULL, NULL);
     SDL_RenderPresent(g_renderer);
     gst_buffer_unmap(buf, &map);
   }
   return GST_FLOW_OK;
+}
+
+void gst_sdl_video_sink_create_window(gint width, gint height)
+{
+  g_screen = SDL_CreateWindow("SDL Overlay", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, g_screen_width, g_screen_height, SDL_WINDOW_RESIZABLE);
+  //g_screen = SDL_CreateWindow("SDL Overlay", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_RESIZABLE);
+  if (!g_screen) {
+      fprintf(stderr, "Could not create window -exiting\n");
+      exit(1);
+  }
+
+  g_renderer = SDL_CreateRenderer(g_screen, -1, SDL_RENDERER_SOFTWARE);
+  //g_renderer = SDL_CreateRenderer(g_screen, -1, SDL_RENDERER_ACCELERATED);
+  if (!g_renderer) {
+      fprintf(stderr, "Could not create renderer - exiting\n");
+      exit(1);
+  }
+
+  g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, width, height);
+  //g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, height, width);
+  if (!g_texture) {
+      fprintf(stderr, "Could not create texture - exiting\n");
+      exit(1);
+  }
 }
 
 static gboolean
