@@ -6,7 +6,7 @@ DIRS        := $(shell echo */)
 
 define TARGET_template
 TARGET  := $$(strip $$(OUTPUT_PATH))/$$(strip $(1))
-TARGETS += $$(TARGET)
+TARGETS += $$(strip $$(OUTPUT_PATH))/$$(strip $(1))
 $$(TARGET):
 	$$(CC) $$(SRC) $$(CFLAGS) $$(LDFLAGS) -o $$@
 endef
