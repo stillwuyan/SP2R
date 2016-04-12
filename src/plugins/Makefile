@@ -7,14 +7,14 @@ DIRS        := $(filter-out tools/, $(shell echo */))
 CFLAGS      += -fPIC
 LDFLAGS     += -shared
 
+# TARGET_plugin(SRC, TARGET, CFLAGS, LDFLAGS)
 define TARGET_plugin
-TARGET      := $$(strip $$(OUTPUT_PATH))/lib$$(strip $(1)).so
-TARGETS     += $$(strip $$(OUTPUT_PATH))/lib$$(strip $(1)).so
-
-$$(TARGET): CFLAGS += $(2)
-$$(TARGET): LDFLAGS += $(3)
-$$(TARGET): $$(SRC)
-	$$(CXX) $$(SRC) $$(CFLAGS) $$(LDFLAGS) -o $$@
+.PHONY: $(1)
+TARGETS     += $(2)
+$(2): CFLAGS += $(3)
+$(2): LDFLAGS += $(4)
+$(2): $(1)
+	$$(CXX) $(1) $$(CFLAGS) $$(LDFLAGS) -o $$(strip $$(OUTPUT_PATH))/lib$$(strip $$@).so
 endef
 
 .PHONY: help all clean
@@ -30,7 +30,7 @@ include $(addsuffix target.mk, $(strip $(DIRS)))
 all: $(OUTPUT_PATH) $(TARGETS)
 
 clean:
-	rm -rf $(TARGETS)
+	rm -rf $(OUTPUT_PATH)
 
 $(OUTPUT_PATH):
 	mkdir -p $@
