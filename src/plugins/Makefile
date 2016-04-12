@@ -9,7 +9,7 @@ LDFLAGS     += -shared
 
 define TARGET_plugin
 TARGET      := $$(strip $$(OUTPUT_PATH))/lib$$(strip $(1)).so
-TARGETS     += $$(TARGET)
+TARGETS     += $$(strip $$(OUTPUT_PATH))/lib$$(strip $(1)).so
 
 $$(TARGET): CFLAGS += $(2)
 $$(TARGET): LDFLAGS += $(3)
