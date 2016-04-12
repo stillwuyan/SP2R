@@ -9,12 +9,12 @@ LDFLAGS     += -shared
 
 # TARGET_plugin(SRC, TARGET, CFLAGS, LDFLAGS)
 define TARGET_plugin
-.PHONY: $(1)
-TARGETS     += $(2)
-$(2): CFLAGS += $(3)
-$(2): LDFLAGS += $(4)
-$(2): $(1)
-	$$(CXX) $(1) $$(CFLAGS) $$(LDFLAGS) -o $$(strip $$(OUTPUT_PATH))/lib$$(strip $$@).so
+TARGET      := $$(strip $$(OUTPUT_PATH))/lib$$(strip $(2)).so
+TARGETS     += $$(strip $$(OUTPUT_PATH))/lib$$(strip $(2)).so
+$$(TARGET): CFLAGS += $(3)
+$$(TARGET): LDFLAGS += $(4)
+$$(TARGET): $(1)
+	$$(CXX) $(1) $$(CFLAGS) $$(LDFLAGS) -o $$@
 endef
 
 .PHONY: help all clean
