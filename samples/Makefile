@@ -4,11 +4,12 @@ include $(strip $(ROOT))/build/common.mk
 OUTPUT_PATH := $(strip $(ROOT))/$(strip $(OUTPUT))/sample
 DIRS        := $(shell echo */)
 
+# TARGET_template(SRC, TARGET)
 define TARGET_template
-TARGET  := $$(strip $$(OUTPUT_PATH))/$$(strip $(1))
-TARGETS += $$(strip $$(OUTPUT_PATH))/$$(strip $(1))
-$$(TARGET): $$(SRC)
-	$$(CC) $$(SRC) $$(CFLAGS) $$(LDFLAGS) -o $$@
+.PHONY: $(2)
+TARGETS += $(2)
+$(2): $(1)
+	$$(CC) $(1) $$(CFLAGS) $$(LDFLAGS) -o $$(strip $$(OUTPUT_PATH))/$$(strip $$@)
 endef
 
 .PHONY: help all clean
@@ -24,7 +25,7 @@ include $(addsuffix target.mk, $(strip $(DIRS)))
 all: $(OUTPUT_PATH) $(TARGETS)
 
 clean:
-	rm -rf $(TARGETS)
+	rm -rf $(OUTPUT_PATH)
 
 $(OUTPUT_PATH):
 	mkdir -p $@
